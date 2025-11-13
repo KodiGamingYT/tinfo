@@ -6,12 +6,27 @@
  */
 var SystemDashboard = {
     updateInterval: null,
+    // Add the version here for internal debugging
+    VERSION: "1.1.4", 
 
     init: function() {
-        console.log("System Status Module Initialized. Starting data polling.");
-        this.fetchStaticInfo(); // Fetch static info only once
+        console.log(`System Status Module Initialized (v${this.VERSION}). Starting data polling.`);
+        
+        // Check if the tizen object is available before attempting API calls
+        if (typeof tizen === 'undefined' || typeof tizen.systeminfo === 'undefined') {
+            document.getElementById('model-name').textContent = "FATAL ERROR: Tizen API Not Found";
+            this.updateErrorStatus("Please check TizenBrew installation or app privileges.");
+            return;
+        }
+
+        this.fetchStaticInfo(); 
         this.startPolling(2000); // Start polling dynamic data every 2000ms (2 seconds)
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
+    },
+    
+    updateErrorStatus: function(message) {
+        document.getElementById('tizen-version').textContent = message;
+        document.getElementById('display-resolution').textContent = "";
     },
 
     handleKeyDown: function(event) {
@@ -30,19 +45,20 @@ var SystemDashboard = {
      * Fetches static information (Model, Version, Display) once on load.
      */
     fetchStaticInfo: function() {
-        // Get Model Name and Tizen Version (BUILD property)
+        // --- Get Model Name and Tizen Version (BUILD property) ---
         tizen.systeminfo.getPropertyValue('BUILD', 
             function(build) {
                 document.getElementById('model-name').textContent = build.model;
-                document.getElementById('tizen-version').textContent = `Platform: ${build.platformVersion}`;
+                document.getElementById('tizen-version').textContent = `Platform: ${build.platformVersion} (v${SystemDashboard.VERSION})`;
             },
             function(error) {
                 document.getElementById('model-name').textContent = "Build Info Error";
-                console.error("BUILD Info Error:", error.message);
+                console.error("BUILD Info API Error (BUILD):", error);
+                SystemDashboard.updateErrorStatus(`API Failed: ${error.name} (${error.message})`);
             }
         );
 
-        // Get Display Resolution
+        // --- Get Display Resolution ---
         tizen.systeminfo.getPropertyValue('DISPLAY', 
             function(display) {
                 document.getElementById('display-resolution').textContent = 
@@ -50,7 +66,7 @@ var SystemDashboard = {
             },
             function(error) {
                 document.getElementById('display-resolution').textContent = "Display Error";
-                console.error("Display Info Error:", error.message);
+                console.error("Display Info API Error (DISPLAY):", error);
             }
         );
     },
@@ -69,6 +85,8 @@ var SystemDashboard = {
             function(error) {
                 document.getElementById('cpu-load').textContent = "CPU Error";
                 document.getElementById('cpu-fill').style.width = "0%";
+                // Log detailed error for debugging
+                console.error("Dynamic API Error (CPU):", error);
             }
         );
 
@@ -85,6 +103,7 @@ var SystemDashboard = {
             function(error) {
                 document.getElementById('memory-total').textContent = "Memory Error";
                 document.getElementById('memory-available').textContent = "";
+                console.error("Dynamic API Error (MEMORY):", error);
             }
         );
 
@@ -93,28 +112,25 @@ var SystemDashboard = {
             function(network) {
                 const statusElement = document.getElementById('network-status');
                 const ipElement = document.getElementById('ip-address');
-
                 statusElement.textContent = `Type: ${network.networkType || 'N/A'}`;
 
-                if (network.ipAddress) {
-                    ipElement.textContent = `IP: ${network.ipAddress}`;
-                } else if (network.networkType === 'WIFI' || network.networkType === 'ETHERNET') {
-                    // Try to get more detailed info for Ethernet/WiFi
-                    tizen.systeminfo.getPropertyValue(`${network.networkType}_NETWORK`, 
-                        function(detail) {
-                            ipElement.textContent = `IP: ${detail.ipAddress || 'Unknown'}`;
-                        }, 
-                        function() {
-                            ipElement.textContent = 'IP: API Error';
-                        }
-                    );
-                } else {
-                    ipElement.textContent = 'Not Connected';
-                }
+                // Attempt to get IP from the dedicated interface property
+                tizen.systeminfo.getPropertyValue('WIFI_NETWORK', function(detail) {
+                    ipElement.textContent = `IP: ${detail.ipAddress || 'Unknown (WiFi)'}`;
+                }, function(error) {
+                    // If WiFi fails, try Ethernet
+                    tizen.systeminfo.getPropertyValue('ETHERNET_NETWORK', function(detail) {
+                        ipElement.textContent = `IP: ${detail.ipAddress || 'Unknown (ETH)'}`;
+                    }, function(error) {
+                        ipElement.textContent = 'IP: Not Found';
+                        console.warn("Could not retrieve detailed IP info:", error);
+                    });
+                });
             },
             function(error) {
                 document.getElementById('network-status').textContent = "Network Error";
                 document.getElementById('ip-address').textContent = error.message;
+                console.error("Dynamic API Error (NETWORK):", error);
             }
         );
 
@@ -137,7 +153,10 @@ var SystemDashboard = {
             function(error) {
                 document.getElementById('storage-available').textContent = "Storage Error";
                 document.getElementById('storage-fill').style.width = "0%";
+                console.error("Dynamic API Error (STORAGE):", error);
             }
         );
     }
 };
+
+
