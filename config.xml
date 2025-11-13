@@ -1,24 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- 
-    This is the mandatory configuration file for any Tizen Web Application.
-    TizenBrew uses this structure to properly load your module.
--->
 <widget xmlns="http://www.w3.org/ns/widgets" 
         xmlns:tizen="http://tizen.org/ns/widgets" 
-        id="http://example.com/TizenBrewHelloWorld" 
+        id="http://example.com/TizenBrewSystemStatus" 
         version="1.0.0" 
         viewmodes="fullscreen">
 
-    <!-- Replace XYZ1234567 with your own unique Package ID prefix (usually 10 characters) -->
-    <tizen:application id="XYZ1234567.HelloWorldModule" package="XYZ1234567" required_version="4.0"/>
+    <!-- Replace XYZ1234567 with your unique Package ID prefix -->
+    <tizen:application id="XYZ1234567.SystemStatusModule" package="XYZ1234567" required_version="4.0"/>
     
     <content src="index.html"/>
-    <name>Hello Brew Module</name>
-    <icon src="icon.png"/> <!-- Placeholder for the icon that TizenBrew might display -->
+    <name>TV System Status</name>
+    <icon src="icon.png"/>
     
+    <!-- MANDATORY PRIVILEGE for accessing SystemInfo API data (CPU, Memory, Storage, Network, Display, Build) -->
+    <tizen:privilege name="http://tizen.org/privilege/systeminfo"/>
+    
+    <!-- General privileges -->
     <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
-    <tizen:privilege name="http://tizen.org/privilege/internet"/>
-
+    
     <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto" devtools-attribute="enable"/>
     <tizen:metadata key="http://samsung.com/tv/metadata/devel/remotedebugging" value="enable"/>
     <tizen:metadata key="http://samsung.com/tv/metadata/support.service/remote_control" value="enable"/>
